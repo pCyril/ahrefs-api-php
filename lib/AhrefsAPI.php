@@ -298,6 +298,79 @@ class AhrefsAPI {
     }
 
     /**
+     * Function to take and build the parameters needed to pass to the API
+     * @param string $param The name of the parameter
+     * @param string $condition The value of the parameter
+     * @return $this
+     */
+    private function set_param($param, $condition) {
+        if (in_array($param, array('where', 'having')) && is_array($condition)) {
+            $this->oriParams[$param][] = $condition;
+
+            $column = $condition[1];
+            $operator = $condition[0];
+            $value = $condition[2];
+
+            //if the operator is lte, lt, gt, gte, eq, ne
+            if (strlen($operator) < 4) {
+                //quote the value depends on the column type
+                $value = $this->wrapValue($value, $column);
+
+                $condition = $column.$this->where[$operator].$value;
+            } else {
+                //quote the value depends on the operator/function type
+                $value = $this->wrapValue($value, $operator);
+
+                $condition = "$operator($column,$value)";
+            }
+
+            if (!isset($this->params[$param]))
+                $this->params[$param] = $condition;
+            else
+                $this->params[$param] .= ','.$condition;
+        } else {
+            if (!in_array($param, array('where', 'having')))
+                $this->params[$param] = $condition;
+            else {
+                if (isset($this->params[$param]))
+                    $this->params[$param] .= ','.$condition;
+                else
+                    $this->params[$param] = $condition;
+            }
+        }
+
+        if ($param == 'from')
+            return $this->fetch();
+        else if ($param == 'prepare')
+            return $this->prepare();
+        else
+            return $this;
+    }
+
+
+    private function wrapValue($value, $type) {
+        //if we need to quote this value
+        if (in_array($type, $this->quotedValue))
+            $value = '"'.addslashes($value).'"';
+        else {
+            foreach($this->columns as $val) {
+                if (isset($val[$type])) {
+                    if (in_array($val[$type][0], array('string','date'))) {
+                        $value = '"'.addslashes($value).'"';
+                        return $value;
+                    } else if (gettype($value) == 'boolean') {
+                        if ($value)
+                            return 'true';
+                        else
+                            return 'false';
+                    }
+                }
+            }
+        }
+        return $value;
+    }
+
+    /**
      * Send the parameters to Ahrefs server and get the json/xml/php return
      * @return json|xml|php data
      */
