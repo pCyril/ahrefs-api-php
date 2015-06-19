@@ -1,4 +1,6 @@
 <?php
+
+namespace pCyril\AhrefsApiPhp;
 /**
  * AhrefsAPI v.0.1. Ahrefs.com API V2 wrapper for PHP
  *
@@ -8,10 +10,6 @@
  *
  */
 require_once('ArrayRules.php');
-
-if (!function_exists('curl_init')) {
-    throw new Exception('CURL PHP extension needed.');
-}
 
 class AhrefsAPI {
 
