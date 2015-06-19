@@ -9,7 +9,7 @@ namespace pCyril\AhrefsApiPhp;
  *
  *
  */
-require_once('ArrayRules.php');
+
 
 class AhrefsAPI {
 
@@ -59,7 +59,7 @@ class AhrefsAPI {
      */
     public function __construct($token = '', $debug = false, $apiUrl = '', $checking = true) {
         if (trim($token) == '')
-            throw new Exception("API token is required.");
+            throw new \Exception("API token is required.");
         $this->token = $token;
         $this->params['output'] = 'json';
         $this->debug = $debug;
@@ -165,7 +165,7 @@ class AhrefsAPI {
         if (isset($this->params['from']) && $this->params['from'] != 'subscription_info') {
             foreach ($this->reqParams as $reqParam) {
                 if (!isset($this->params[$reqParam]))
-                    throw new Exception("<b>$reqParam</b> is required.");
+                    throw new \Exception("<b>$reqParam</b> is required.");
             }
         }
         $paramStr = array();
@@ -254,7 +254,7 @@ class AhrefsAPI {
                 }
                 break;
             default:
-                throw new Exception("Function <b>$method</b> not found");
+                throw new \Exception("Function <b>$method</b> not found");
         }
         if (isset($arguments)) {
             return call_user_func_array($fn,$arguments);
@@ -478,7 +478,7 @@ class AhrefsAPI {
             return true;
 
         if (!(isset($this->functions[$call]) && in_array($name, $this->functions[$call]))) {
-            throw new Exception("Function <b>{$call}_{$name}</b> not found.");
+            throw new \Exception("Function <b>{$call}_{$name}</b> not found.");
         }
     }
 
