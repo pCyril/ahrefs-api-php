@@ -77,6 +77,7 @@ class AhrefsAPI {
     private $curlInfo = array();
     private $post = 0;
     private $withOriginalStats = 0;
+    private $lastMessageError;
     /**
      * Constructing class
      * @param string $token Application API Token from ahrefs website
@@ -102,6 +103,7 @@ class AhrefsAPI {
     /**
      * Build API V2 parameters, displaying debug messages, resetting parameter variables, calling and returning API results from getContent()
      * @return output from getContent()
+     * @throws \Exception
      */
     private function fetch() {
         $this->checkColumns();
@@ -115,6 +117,8 @@ class AhrefsAPI {
                 $this->reset();
                 $this->is_prepare = false;
             }
+        } else {
+            throw new \Exception($this->lastMessageError);
         }
     }
 
@@ -220,8 +224,11 @@ class AhrefsAPI {
         if (!count($this->err))
             return false; //no error
 
-        foreach ($this->err as $error)
-            echo "Error: $error<br>";
+        $errorMessage = '';
+        foreach ($this->err as $error) {
+            $errorMessage .="Error: $error, ";
+        }
+        $this->lastMessageError = $errorMessage;
         return true;
 
     }
@@ -230,6 +237,8 @@ class AhrefsAPI {
      * Magic method to catch all functions and parse it to set_param function
      * @param string $method The name of the function
      * @param array $args Arguments passed to the function
+     * @return mixed
+     * @throws \Exception
      */
     public function __call($method,$args) {
         $method = explode('_', $method);
@@ -289,96 +298,8 @@ class AhrefsAPI {
     }
 
     /**
-     * Function to take and build the parameters needed to pass to the API
-     * @param string $param The name of the parameter
-     * @param string $value The value of the parameter
-     * @return $this
-     */
-    private function set_param($param, $condition) {
-        if (in_array($param, array('where', 'having')) && is_array($condition)) {
-            $this->oriParams[$param][] = $condition;
-
-            $column = $condition[1];
-            $operator = $condition[0];
-            $value = $condition[2];
-
-            //if the operator is lte, lt, gt, gte, eq, ne
-            if (strlen($operator) < 4) {
-                //quote the value depends on the column type
-                $value = $this->wrapValue($value, $column);
-
-                $condition = $column.$this->where[$operator].$value;
-            } else {
-                //quote the value depends on the operator/function type
-                $value = $this->wrapValue($value, $operator);
-
-                $condition = "$operator($column,$value)";
-            }
-
-            if (!isset($this->params[$param]))
-                $this->params[$param] = $condition;
-            else
-                $this->params[$param] .= ','.$condition;
-        } else {
-            if (!in_array($param, array('where', 'having')))
-                $this->params[$param] = $condition;
-            else {
-                if (isset($this->params[$param]))
-                    $this->params[$param] .= ','.$condition;
-                else
-                    $this->params[$param] = $condition;
-            }
-        }
-
-        if ($param == 'from')
-            return $this->fetch();
-        else if ($param == 'prepare')
-            return $this->prepare();
-        else
-            return $this;
-    }
-
-
-    private function wrapValue($value, $type) {
-        //if we need to quote this value
-        if (in_array($type, $this->quotedValue))
-            $value = '"'.addslashes($value).'"';
-        else {
-            foreach($this->columns as $val) {
-                if (isset($val[$type])) {
-                    if (in_array($val[$type][0], array('string','date'))) {
-                        $value = '"'.addslashes($value).'"';
-                        return $value;
-                    } else if (gettype($value) == 'boolean') {
-                        if ($value)
-                            return 'true';
-                        else
-                            return 'false';
-                    }
-                }
-            }
-        }
-        return $value;
-    }
-    /*
-        private function cacheResult() {
-            if ($this->cache) {
-                $filename = 'lib/cache/'.$this->paramsURL;
-                if (!is_file($filename)) {
-                    $content = file_get_contents($this->apiURL.'/?'.$this->paramsURL);
-                    file_put_contents($filename, $content);
-                } else {
-                    $content = file_get_contents($filename);
-                }
-            } else
-                $content = file_get_contents($this->apiURL.'/?'.$this->paramsURL);
-
-            return $content;
-        }
-        */
-    /**
      * Send the parameters to Ahrefs server and get the json/xml/php return
-     * @return json/xml/php data
+     * @return json|xml|php data
      */
     private function getContent($multi = false) {
         $links = $this->paramsURLs;
@@ -497,7 +418,8 @@ class AhrefsAPI {
      * Checking if the function exist in this file
      * @param String $call The name of the prefix
      * @param String $name the name of the function
-     * @return Error string
+     * @return bool
+     * @throws \Exception
      */
     private function isFunction($call, $name) {
         //is checking enabled
@@ -517,7 +439,3 @@ class AhrefsAPI {
         return $this->curlInfo;
     }
 }
-
-set_exception_handler(function($exception) {
-    echo "Error: " . $exception->getMessage();
-});
